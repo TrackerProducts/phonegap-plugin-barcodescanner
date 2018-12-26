@@ -67,6 +67,7 @@
 @property (nonatomic)         BOOL                        isTransitionAnimated;
 @property (nonatomic)         BOOL                        isSuccessBeepEnabled;
 @property BOOL isContinuous;
+NSMutableArray continuousArray;
 
 - (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback parentViewController:(UIViewController*)parentViewController alterateOverlayXib:(NSString *)alternateXib;
 - (void)scanBarcode;
@@ -227,6 +228,7 @@
 - (void)scanContinuous:(CDVInvokedUrlCommand*)command {
 {
     self.isContinuous = YES;
+    self.continuousArray = [[NSMutableArray alloc] initWithCapacity:100];
     [self setupScan command:command];
 }
 
@@ -435,18 +437,30 @@ parentViewController:(UIViewController*)parentViewController
         if (self.isSuccessBeepEnabled) {
             AudioServicesPlaySystemSound(_soundFileObject);
         }
-        [self barcodeScanDone:^{
-            [self.plugin returnSuccess:text format:format cancelled:FALSE flipped:FALSE callback:self.callback];
-        }];
+
+        if(!self.isContinuous){
+            [self barcodeScanDone:^{
+                [self.plugin returnSuccess:text format:format cancelled:FALSE flipped:FALSE callback:self.callback];
+            }];
+        }else {
+            self.continuousArray.add(text);
+        }
     });
 }
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanFailed:(NSString*)message {
     dispatch_sync(dispatch_get_main_queue(), ^{
-        [self barcodeScanDone:^{
-            [self.plugin returnError:message callback:self.callback];
-        }];
+
+        if(!self.isContinuous){
+            [self barcodeScanDone:^{
+                [self.plugin returnError:message callback:self.callback];
+            }];
+        }else {
+            [self barcodeScanDone:^{
+                [self.plugin returnSuccess:self.continuousArray format:format cancelled:FALSE flipped:FALSE callback:self.callback];
+            }];
+        }
     });
 }
 
