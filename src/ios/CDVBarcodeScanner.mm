@@ -364,6 +364,8 @@ parentViewController:(UIViewController*)parentViewController
      ];
 }
 
+// phonegap plugin add https://github.com/akeresztesgh/phonegap-plugin-barcodescanner.git
+
 //--------------------------------------------------------------------------
 - (void)barcodeScanDone:(void (^)(void))callbackBlock {
     /*
