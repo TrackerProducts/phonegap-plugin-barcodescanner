@@ -66,7 +66,7 @@
 @property (nonatomic)         BOOL                        isFlipped;
 @property (nonatomic)         BOOL                        isTransitionAnimated;
 @property (nonatomic)         BOOL                        isSuccessBeepEnabled;
-
+@property BOOL isCancelled;
 
 - (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback parentViewController:(UIViewController*)parentViewController alterateOverlayXib:(NSString *)alternateXib;
 - (void)scanBarcode;
@@ -101,6 +101,7 @@
 @property (nonatomic, retain) IBOutlet UIView* overlayView;
 @property (nonatomic, retain) UIToolbar * toolbar;
 @property (nonatomic, retain) UIView * reticleView;
+
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
 
@@ -293,6 +294,7 @@
 @synthesize is2D                 = _is2D;
 @synthesize capturing            = _capturing;
 @synthesize results              = _results;
+@synthesize isCancelled;
 
 SystemSoundID _soundFileObject;
 
@@ -368,23 +370,24 @@ parentViewController:(UIViewController*)parentViewController
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanDone:(void (^)(void))callbackBlock {
-    /*
-    self.capturing = NO;
-    [self.captureSession stopRunning];
-    [self.parentViewController dismissViewControllerAnimated:self.isTransitionAnimated completion:callbackBlock];
+    if(isCancelled)
+    {
+        self.capturing = NO;
+        [self.captureSession stopRunning];
+        [self.parentViewController dismissViewControllerAnimated:self.isTransitionAnimated completion:callbackBlock];
 
 
-    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-    [device lockForConfiguration:nil];
-    if([device isAutoFocusRangeRestrictionSupported]) {
-        [device setAutoFocusRangeRestriction:AVCaptureAutoFocusRangeRestrictionNone];
-    }
-    [device unlockForConfiguration];
+        AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+        [device lockForConfiguration:nil];
+        if([device isAutoFocusRangeRestrictionSupported]) {
+            [device setAutoFocusRangeRestriction:AVCaptureAutoFocusRangeRestrictionNone];
+        }
+        [device unlockForConfiguration];
 
-    // viewcontroller holding onto a reference to us, release them so they
-    // will release us
-    self.viewController = nil;
-    */
+        // viewcontroller holding onto a reference to us, release them so they
+        // will release us
+        self.viewController = nil;
+    }    
 }
 
 //--------------------------------------------------------------------------
@@ -441,6 +444,8 @@ parentViewController:(UIViewController*)parentViewController
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanCancelled {
+    self.isCancelled = YES;
+
     [self barcodeScanDone:^{
         [self.plugin returnSuccess:@"" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
     }];
