@@ -130,6 +130,65 @@ BarcodeScanner.prototype.scan = function (successCallback, errorCallback, config
             );
         };
 
+        BarcodeScanner.prototype.scanContinuous = function (successCallback, errorCallback, config) {
+
+            if (config instanceof Array) {
+                // do nothing
+            } else {
+                if (typeof(config) === 'object') {
+                    // string spaces between formats, ZXing does not like that
+                    if (config.formats) {
+                        config.formats = config.formats.replace(/\s+/g, '');
+                    }
+                    config = [ config ];
+                } else {
+                    config = [];
+                }
+            }
+
+            if (errorCallback == null) {
+                errorCallback = function () {
+                };
+            }
+
+            if (typeof errorCallback != "function") {
+                console.log("BarcodeScanner.scan failure: failure parameter not a function");
+                return;
+            }
+
+            if (typeof successCallback != "function") {
+                console.log("BarcodeScanner.scan failure: success callback parameter must be a function");
+                return;
+            }
+
+            if (scanInProgress) {
+                errorCallback('Scan is already in progress');
+                return;
+            }
+
+            scanInProgress = true;
+
+            exec(
+                function(result) {
+                    scanInProgress = false;
+                    result.forEach(x => {
+                        // work around bug in ZXing library
+                        if (x.format === 'UPC_A' && x.text.length === 13) {
+                            x.text = x.text.substring(1);
+                        }
+                    })
+                    successCallback(result);
+                },
+                function(error) {
+                    scanInProgress = false;
+                    errorCallback(error);
+                },
+                'BarcodeScanner',
+                'scanContinuous',
+                config
+            );
+        };
+
         //-------------------------------------------------------------------
         BarcodeScanner.prototype.encode = function (type, data, successCallback, errorCallback, options) {
             if (errorCallback == null) {

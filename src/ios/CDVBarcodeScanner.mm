@@ -66,7 +66,7 @@
 @property (nonatomic)         BOOL                        isFlipped;
 @property (nonatomic)         BOOL                        isTransitionAnimated;
 @property (nonatomic)         BOOL                        isSuccessBeepEnabled;
-@property BOOL isCancelled;
+@property BOOL isContinuous;
 
 - (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback parentViewController:(UIViewController*)parentViewController alterateOverlayXib:(NSString *)alternateXib;
 - (void)scanBarcode;
@@ -153,7 +153,7 @@
 
 
 //--------------------------------------------------------------------------
-- (void)scan:(CDVInvokedUrlCommand*)command {
+- (void)setupScan(CDVInvokedUrlCommand*) command {
     CDVbcsProcessor* processor;
     NSString*       callback;
     NSString*       capabilityError;
@@ -217,6 +217,17 @@
     processor.formats = options[@"formats"];
 
     [processor performSelector:@selector(scanBarcode) withObject:nil afterDelay:0];
+}
+
+- (void)scan:(CDVInvokedUrlCommand*)command {
+    self.isContinuous = NO;
+    [self setupScan command:command];
+}
+
+- (void)scanContinuous:(CDVInvokedUrlCommand*)command {
+{
+    self.isContinuous = YES;
+    [self setupScan command:command];
 }
 
 //--------------------------------------------------------------------------
@@ -294,7 +305,7 @@
 @synthesize is2D                 = _is2D;
 @synthesize capturing            = _capturing;
 @synthesize results              = _results;
-@synthesize isCancelled;
+@synthesize isContinuous;
 
 SystemSoundID _soundFileObject;
 
@@ -370,24 +381,21 @@ parentViewController:(UIViewController*)parentViewController
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanDone:(void (^)(void))callbackBlock {
-    if(isCancelled)
-    {
-        self.capturing = NO;
-        [self.captureSession stopRunning];
-        [self.parentViewController dismissViewControllerAnimated:self.isTransitionAnimated completion:callbackBlock];
+    self.capturing = NO;
+    [self.captureSession stopRunning];
+    [self.parentViewController dismissViewControllerAnimated:self.isTransitionAnimated completion:callbackBlock];
 
 
-        AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-        [device lockForConfiguration:nil];
-        if([device isAutoFocusRangeRestrictionSupported]) {
-            [device setAutoFocusRangeRestriction:AVCaptureAutoFocusRangeRestrictionNone];
-        }
-        [device unlockForConfiguration];
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    [device lockForConfiguration:nil];
+    if([device isAutoFocusRangeRestrictionSupported]) {
+        [device setAutoFocusRangeRestriction:AVCaptureAutoFocusRangeRestrictionNone];
+    }
+    [device unlockForConfiguration];
 
-        // viewcontroller holding onto a reference to us, release them so they
-        // will release us
-        self.viewController = nil;
-    }    
+    // viewcontroller holding onto a reference to us, release them so they
+    // will release us
+    self.viewController = nil;
 }
 
 //--------------------------------------------------------------------------
@@ -444,8 +452,6 @@ parentViewController:(UIViewController*)parentViewController
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanCancelled {
-    self.isCancelled = YES;
-
     [self barcodeScanDone:^{
         [self.plugin returnSuccess:@"" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
     }];
