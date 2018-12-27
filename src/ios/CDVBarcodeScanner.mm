@@ -38,16 +38,21 @@
 @interface CDVBarcodeScanner : CDVPlugin {}
 - (NSString*)isScanNotPossible;
 - (void)scan:(CDVInvokedUrlCommand*)command;
+- (void)scanContinuous:(CDVInvokedUrlCommand*)command;
+- (void)setupScan:(CDVInvokedUrlCommand*)command scanContinuous:(BOOL)scanContinuous;
 - (void)encode:(CDVInvokedUrlCommand*)command;
 - (void)returnImage:(NSString*)filePath format:(NSString*)format callback:(NSString*)callback;
 - (void)returnSuccess:(NSString*)scannedText format:(NSString*)format cancelled:(BOOL)cancelled flipped:(BOOL)flipped callback:(NSString*)callback;
+- (void)returnSuccess: (NSMutableArray<NSString*> *)scanArray cancelled:(BOOL)cancelled flipped:(BOOL)flipped callback:(NSString*)callback;
 - (void)returnError:(NSString*)message callback:(NSString*)callback;
 @end
 
 //------------------------------------------------------------------------------
 // class that does the grunt work
 //------------------------------------------------------------------------------
-@interface CDVbcsProcessor : NSObject <AVCaptureMetadataOutputObjectsDelegate> {}
+@interface CDVbcsProcessor : NSObject <AVCaptureMetadataOutputObjectsDelegate> {
+    
+}
 @property (nonatomic, retain) CDVBarcodeScanner*           plugin;
 @property (nonatomic, retain) NSString*                   callback;
 @property (nonatomic, retain) UIViewController*           parentViewController;
@@ -66,7 +71,8 @@
 @property (nonatomic)         BOOL                        isFlipped;
 @property (nonatomic)         BOOL                        isTransitionAnimated;
 @property (nonatomic)         BOOL                        isSuccessBeepEnabled;
-
+@property (nonatomic)         BOOL                        isContinuous;
+@property (strong, nonatomic) NSMutableArray<NSString*>*  continuousArray;
 
 - (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback parentViewController:(UIViewController*)parentViewController alterateOverlayXib:(NSString *)alternateXib;
 - (void)scanBarcode;
@@ -101,6 +107,7 @@
 @property (nonatomic, retain) IBOutlet UIView* overlayView;
 @property (nonatomic, retain) UIToolbar * toolbar;
 @property (nonatomic, retain) UIView * reticleView;
+
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
 
@@ -142,7 +149,8 @@
 -(BOOL)isUsageDescriptionSet
 {
   NSDictionary * plist = [[NSBundle mainBundle] infoDictionary];
-  if ([plist objectForKey:@"NSCameraUsageDescription" ]) {
+  if ([plist objectForKey:@"NSCameraUsageDescription" ] ||
+      [[NSBundle mainBundle] localizedStringForKey: @"NSCameraUsageDescription" value: nil table: @"InfoPlist"]) {
     return YES;
   }
   return NO;
@@ -151,7 +159,7 @@
 
 
 //--------------------------------------------------------------------------
-- (void)scan:(CDVInvokedUrlCommand*)command {
+- (void)setupScan:(CDVInvokedUrlCommand*) command scanContinuous: (BOOL)scanContinuous {
     CDVbcsProcessor* processor;
     NSString*       callback;
     NSString*       capabilityError;
@@ -208,6 +216,10 @@
       processor.isShowTorchButton = true;
     }
 
+    if(scanContinuous){
+        processor.isContinuous = YES;
+        processor.continuousArray = [[NSMutableArray alloc] init];
+    }
     processor.isSuccessBeepEnabled = !disableSuccessBeep;
 
     processor.isTransitionAnimated = !disableAnimations;
@@ -215,6 +227,14 @@
     processor.formats = options[@"formats"];
 
     [processor performSelector:@selector(scanBarcode) withObject:nil afterDelay:0];
+}
+
+- (void)scan:(CDVInvokedUrlCommand*)command {
+    [self setupScan:command scanContinuous: NO];
+}
+
+- (void)scanContinuous:(CDVInvokedUrlCommand*)command {
+    [self setupScan:command scanContinuous: YES];
 }
 
 //--------------------------------------------------------------------------
@@ -264,6 +284,26 @@
     [self.commandDelegate sendPluginResult:result callbackId:callback];
 }
 
+- (void)returnSuccess: (NSMutableArray<NSString*> *)scanArray cancelled:(BOOL)cancelled flipped:(BOOL)flipped callback:(NSString*)callback{
+    NSNumber* cancelledNumber = @(cancelled ? 1 : 0);
+    
+    NSMutableArray* results = [NSMutableArray new];
+    for(int i=0; i<scanArray.count; i++){
+        NSMutableDictionary* resultDict = [NSMutableDictionary new];
+        resultDict[@"text"] = scanArray[i];
+        resultDict[@"format"] = @"multiple";
+        resultDict[@"cancelled"] = cancelledNumber;
+        [results addObject:resultDict];
+    }
+    
+    CDVPluginResult* result = [CDVPluginResult
+                               resultWithStatus: CDVCommandStatus_OK
+                               messageAsArray:results
+                               ];
+    [self.commandDelegate sendPluginResult:result callbackId:callback];
+}
+
+
 //--------------------------------------------------------------------------
 - (void)returnError:(NSString*)message callback:(NSString*)callback {
     CDVPluginResult* result = [CDVPluginResult
@@ -292,7 +332,9 @@
 @synthesize is2D                 = _is2D;
 @synthesize capturing            = _capturing;
 @synthesize results              = _results;
-
+@synthesize isContinuous;
+@synthesize continuousArray;
+    
 SystemSoundID _soundFileObject;
 
 //--------------------------------------------------------------------------
@@ -363,6 +405,8 @@ parentViewController:(UIViewController*)parentViewController
      ];
 }
 
+// phonegap plugin add https://github.com/akeresztesgh/phonegap-plugin-barcodescanner.git
+
 //--------------------------------------------------------------------------
 - (void)barcodeScanDone:(void (^)(void))callbackBlock {
     self.capturing = NO;
@@ -419,15 +463,21 @@ parentViewController:(UIViewController*)parentViewController
         if (self.isSuccessBeepEnabled) {
             AudioServicesPlaySystemSound(_soundFileObject);
         }
-        [self barcodeScanDone:^{
-            [self.plugin returnSuccess:text format:format cancelled:FALSE flipped:FALSE callback:self.callback];
-        }];
+
+        if(!self.isContinuous){
+            [self barcodeScanDone:^{
+                [self.plugin returnSuccess:text format:format cancelled:FALSE flipped:FALSE callback:self.callback];
+            }];
+        }else {
+            [self.continuousArray addObject:text];
+        }
     });
 }
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanFailed:(NSString*)message {
     dispatch_sync(dispatch_get_main_queue(), ^{
+
         [self barcodeScanDone:^{
             [self.plugin returnError:message callback:self.callback];
         }];
@@ -436,9 +486,16 @@ parentViewController:(UIViewController*)parentViewController
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanCancelled {
-    [self barcodeScanDone:^{
-        [self.plugin returnSuccess:@"" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
-    }];
+    if(!self.isContinuous){
+        [self barcodeScanDone:^{
+            [self.plugin returnSuccess:@"" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
+        }];
+
+    }else {
+        [self barcodeScanDone:^{
+            [self.plugin returnSuccess:self.continuousArray cancelled:FALSE flipped:FALSE callback:self.callback];
+        }];
+    }
     if (self.isFlipped) {
         self.isFlipped = NO;
     }
@@ -758,7 +815,7 @@ parentViewController:(UIViewController*)parentViewController
 - (void)viewWillAppear:(BOOL)animated {
 
     // set video orientation to what the camera sees
-    self.processor.previewLayer.connection.videoOrientation = (AVCaptureVideoOrientation) [[UIApplication sharedApplication] statusBarOrientation];
+    self.processor.previewLayer.connection.videoOrientation = [self interfaceOrientationToVideoOrientation:[UIApplication sharedApplication].statusBarOrientation];
 
     // this fixes the bug when the statusbar is landscape, and the preview layer
     // starts up in portrait (not filling the whole view)
@@ -773,7 +830,7 @@ parentViewController:(UIViewController*)parentViewController
     previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
 
     if ([previewLayer.connection isVideoOrientationSupported]) {
-        [previewLayer.connection setVideoOrientation:[[UIApplication sharedApplication] statusBarOrientation]];
+        previewLayer.connection.videoOrientation = [self interfaceOrientationToVideoOrientation:[UIApplication sharedApplication].statusBarOrientation];
     }
 
     [self.view.layer insertSublayer:previewLayer below:[[self.view.layer sublayers] objectAtIndex:0]];
@@ -782,6 +839,21 @@ parentViewController:(UIViewController*)parentViewController
     [self startCapturing];
 
     [super viewDidAppear:animated];
+}
+
+- (AVCaptureVideoOrientation)interfaceOrientationToVideoOrientation:(UIInterfaceOrientation)orientation {
+    switch (orientation) {
+        case UIInterfaceOrientationPortrait:
+            return AVCaptureVideoOrientationPortrait;
+        case UIInterfaceOrientationPortraitUpsideDown:
+            return AVCaptureVideoOrientationPortraitUpsideDown;
+        case UIInterfaceOrientationLandscapeLeft:
+            return AVCaptureVideoOrientationLandscapeLeft;
+        case UIInterfaceOrientationLandscapeRight:
+            return AVCaptureVideoOrientationLandscapeRight;
+        default:
+            return AVCaptureVideoOrientationPortrait;
+   }
 }
 
 //--------------------------------------------------------------------------
