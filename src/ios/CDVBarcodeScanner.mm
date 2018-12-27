@@ -460,15 +460,25 @@ parentViewController:(UIViewController*)parentViewController
 //--------------------------------------------------------------------------
 - (void)barcodeScanSucceeded:(NSString*)text format:(NSString*)format {
     dispatch_sync(dispatch_get_main_queue(), ^{
-        if (self.isSuccessBeepEnabled) {
-            AudioServicesPlaySystemSound(_soundFileObject);
-        }
 
         if(!self.isContinuous){
+            if (self.isSuccessBeepEnabled) {
+                AudioServicesPlaySystemSound(_soundFileObject);
+            }
+
             [self barcodeScanDone:^{
                 [self.plugin returnSuccess:text format:format cancelled:FALSE flipped:FALSE callback:self.callback];
             }];
         }else {
+            for(int i=0; i<self.continuousArray.count; i++){
+                if([self.continuousArray[i] isEqualToString: text]){
+                    return;
+                }
+            }
+            
+            if (self.isSuccessBeepEnabled) {
+                AudioServicesPlaySystemSound(_soundFileObject);
+            }
             [self.continuousArray addObject:text];
         }
     });
