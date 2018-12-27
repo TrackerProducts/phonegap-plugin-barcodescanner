@@ -39,6 +39,7 @@
 - (NSString*)isScanNotPossible;
 - (void)scan:(CDVInvokedUrlCommand*)command;
 - (void)scanContinuous:(CDVInvokedUrlCommand*)command;
+- (void)setupScan:(CDVInvokedUrlCommand*)command;
 - (void)encode:(CDVInvokedUrlCommand*)command;
 - (void)returnImage:(NSString*)filePath format:(NSString*)format callback:(NSString*)callback;
 - (void)returnSuccess:(NSString*)scannedText format:(NSString*)format cancelled:(BOOL)cancelled flipped:(BOOL)flipped callback:(NSString*)callback;
@@ -48,7 +49,9 @@
 //------------------------------------------------------------------------------
 // class that does the grunt work
 //------------------------------------------------------------------------------
-@interface CDVbcsProcessor : NSObject <AVCaptureMetadataOutputObjectsDelegate> {}
+@interface CDVbcsProcessor : NSObject <AVCaptureMetadataOutputObjectsDelegate> {
+    NSMutableArray *continuousArray;
+}
 @property (nonatomic, retain) CDVBarcodeScanner*           plugin;
 @property (nonatomic, retain) NSString*                   callback;
 @property (nonatomic, retain) UIViewController*           parentViewController;
@@ -68,7 +71,6 @@
 @property (nonatomic)         BOOL                        isTransitionAnimated;
 @property (nonatomic)         BOOL                        isSuccessBeepEnabled;
 @property BOOL isContinuous;
-NSMutableArray continuousArray;
 
 - (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback parentViewController:(UIViewController*)parentViewController alterateOverlayXib:(NSString *)alternateXib;
 - (void)scanBarcode;
@@ -155,7 +157,7 @@ NSMutableArray continuousArray;
 
 
 //--------------------------------------------------------------------------
-- (void)setupScan(CDVInvokedUrlCommand*) command {
+- (void)setupScan:(CDVInvokedUrlCommand*) command {
     CDVbcsProcessor* processor;
     NSString*       callback;
     NSString*       capabilityError;
