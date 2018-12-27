@@ -452,23 +452,24 @@ parentViewController:(UIViewController*)parentViewController
 - (void)barcodeScanFailed:(NSString*)message {
     dispatch_sync(dispatch_get_main_queue(), ^{
 
-        if(!self.isContinuous){
-            [self barcodeScanDone:^{
-                [self.plugin returnError:message callback:self.callback];
-            }];
-        }else {
-            [self barcodeScanDone:^{
-                [self.plugin returnSuccess:self.continuousArray format:format cancelled:FALSE flipped:FALSE callback:self.callback];
-            }];
-        }
+        [self barcodeScanDone:^{
+            [self.plugin returnError:message callback:self.callback];
+        }];
     });
 }
 
 //--------------------------------------------------------------------------
 - (void)barcodeScanCancelled {
-    [self barcodeScanDone:^{
-        [self.plugin returnSuccess:@"" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
-    }];
+    if(!self.isContinuous){{
+        [self barcodeScanDone:^{
+            [self.plugin returnSuccess:@"" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
+        }];
+
+    }else {
+        [self barcodeScanDone:^{
+            [self.plugin returnSuccess:self.continuousArray format:format cancelled:FALSE flipped:FALSE callback:self.callback];
+        }];
+    }
     if (self.isFlipped) {
         self.isFlipped = NO;
     }
