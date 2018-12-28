@@ -932,11 +932,19 @@ parentViewController:(UIViewController*)parentViewController
     self.toolbar = [[UIToolbar alloc] init];
     self.toolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 
-    id cancelButton = [[UIBarButtonItem alloc]
-                       initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-                       target:(id)self
-                       action:@selector(cancelButtonPressed:)
-                       ];
+    id cancelButton;
+    if(self.processor.isContinuous){
+        cancelButton = [[UIBarButtonItem alloc] initWithTitle:@"Done"
+                                         style:UIBarButtonItemStylePlain
+                                        target:self action:@selector(cancelButtonPressed:)];
+    }else {
+        cancelButton = [[UIBarButtonItem alloc]
+                           initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+                           target:(id)self
+                           action:@selector(cancelButtonPressed:)
+                           ];
+    }
+
 
 
     id flexSpace = [[UIBarButtonItem alloc]
