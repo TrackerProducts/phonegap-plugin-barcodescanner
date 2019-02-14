@@ -981,15 +981,15 @@ parentViewController:(UIViewController*)parentViewController
                         ];
 
     if (_processor.isShowFlipCameraButton) {
-      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, checkButton, flipCamera, shutterButton, nil];
+      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, checkButton, flipCamera, shutterButton, nil];
     } else {
-      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, checkButton, shutterButton, nil];
+      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, checkButton, shutterButton, nil];
     }
 #else
     if (_processor.isShowFlipCameraButton) {
-      items = [@[flexSpace, cancelButton, checkButton, flipCamera] mutableCopy];
+      items = [@[flexSpace, cancelButton, flexSpace, checkButton, flipCamera] mutableCopy];
     } else {
-      items = [@[flexSpace, cancelButton, checkButton] mutableCopy];
+      items = [@[flexSpace, cancelButton, flexSpace, checkButton] mutableCopy];
     }
 #endif
 
