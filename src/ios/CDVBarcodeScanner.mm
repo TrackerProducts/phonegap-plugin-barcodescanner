@@ -959,6 +959,18 @@ parentViewController:(UIViewController*)parentViewController
                        action:@selector(flipCameraButtonPressed:)
                        ];
 
+    NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:@"CDVBarcodeScanner" withExtension:@"bundle"];
+    NSBundle *bundle = [NSBundle bundleWithURL:bundleURL];
+    NSString *imagePath = [bundle pathForResource:@"check" ofType:@"png"];
+    UIImage *image = [UIImage imageWithContentsOfFile:imagePath];
+
+    id checkButton = [[UIBarButtonItem alloc]
+                        initWithImage:image
+                                style:UIBarButtonItemStylePlain
+                                target:nil
+                                action:nil
+                        ];
+
     NSMutableArray *items;
 
 #if USE_SHUTTER
@@ -969,15 +981,15 @@ parentViewController:(UIViewController*)parentViewController
                         ];
 
     if (_processor.isShowFlipCameraButton) {
-      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, flipCamera, shutterButton, nil];
+      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, checkButton, flipCamera, shutterButton, nil];
     } else {
-      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, shutterButton, nil];
+      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, checkButton, shutterButton, nil];
     }
 #else
     if (_processor.isShowFlipCameraButton) {
-      items = [@[flexSpace, cancelButton, flexSpace, flipCamera] mutableCopy];
+      items = [@[flexSpace, cancelButton, checkButton, flipCamera] mutableCopy];
     } else {
-      items = [@[flexSpace, cancelButton, flexSpace] mutableCopy];
+      items = [@[flexSpace, cancelButton, checkButton] mutableCopy];
     }
 #endif
 
