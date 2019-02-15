@@ -107,6 +107,7 @@
 @property (nonatomic, retain) IBOutlet UIView* overlayView;
 @property (nonatomic, retain) UIToolbar * toolbar;
 @property (nonatomic, retain) UIView * reticleView;
+@property (nonatomic, strong) UIBarButtonItem* checkButton;
 
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
@@ -964,7 +965,7 @@ parentViewController:(UIViewController*)parentViewController
     NSString *imagePath = [bundle pathForResource:@"check" ofType:@"png"];
     UIImage *image = [UIImage imageWithContentsOfFile:imagePath];
 
-    id checkButton = [[UIBarButtonItem alloc]
+    self.checkButton = [[UIBarButtonItem alloc]
                         initWithImage:image
                                 style:UIBarButtonItemStylePlain
                                 target:nil
@@ -981,15 +982,15 @@ parentViewController:(UIViewController*)parentViewController
                         ];
 
     if (_processor.isShowFlipCameraButton) {
-      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, checkButton, flipCamera, shutterButton, nil];
+      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, self.checkButton, flipCamera, shutterButton, nil];
     } else {
-      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, checkButton, shutterButton, nil];
+      items = [NSMutableArray arrayWithObjects:flexSpace, cancelButton, flexSpace, self.checkButton, shutterButton, nil];
     }
 #else
     if (_processor.isShowFlipCameraButton) {
-      items = [@[flexSpace, cancelButton, flexSpace, checkButton, flipCamera] mutableCopy];
+      items = [@[flexSpace, cancelButton, flexSpace, self.checkButton, flipCamera] mutableCopy];
     } else {
-      items = [@[flexSpace, cancelButton, flexSpace, checkButton] mutableCopy];
+      items = [@[flexSpace, cancelButton, flexSpace, self.checkButton] mutableCopy];
     }
 #endif
 
