@@ -109,6 +109,7 @@
 @property (nonatomic, retain) UIToolbar * toolbar;
 @property (nonatomic, retain) UIView * reticleView;
 @property (nonatomic, strong) UIBarButtonItem* checkButton;
+@property (nonatomic, strong) UIImage *checkButtonImage;
 
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
@@ -478,8 +479,8 @@ parentViewController:(UIViewController*)parentViewController
                 }
             }
 
-            self.viewController.checkButton.width = 0;
-            [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(hideCheckButton) userInfo:nil repeats:NO];
+            [self.viewController.checkButton setImage: self.checkButtonImage];
+            [NSTimer scheduledTimerWithTimeInterval:2 target:self selector:@selector(hideCheckButton) userInfo:nil repeats:NO];
             
             if (self.isSuccessBeepEnabled) {
                 AudioServicesPlaySystemSound(_soundFileObject);
@@ -490,7 +491,7 @@ parentViewController:(UIViewController*)parentViewController
 }
 
 - (void) hideCheckButton {
-    self.viewController.checkButton.width = 0.01;
+    [self.viewController.checkButton setImage: nil];
 }
 
 //--------------------------------------------------------------------------
@@ -971,10 +972,10 @@ parentViewController:(UIViewController*)parentViewController
     NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:@"CDVBarcodeScanner" withExtension:@"bundle"];
     NSBundle *bundle = [NSBundle bundleWithURL:bundleURL];
     NSString *imagePath = [bundle pathForResource:@"check" ofType:@"png"];
-    UIImage *image = [[UIImage imageWithContentsOfFile:imagePath] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    self.checkButtonImage = [[UIImage imageWithContentsOfFile:imagePath] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
 
     self.checkButton = [[UIBarButtonItem alloc]
-                        initWithImage:image
+                        initWithImage:nil
                                 style:UIBarButtonItemStylePlain
                                 target:nil
                                 action:nil
