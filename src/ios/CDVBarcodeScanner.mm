@@ -82,6 +82,7 @@
 - (void)openDialog;
 - (NSString*)setUpCaptureSession;
 - (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection;
+- (void) hideCheckButton();
 @end
 
 //------------------------------------------------------------------------------
@@ -476,6 +477,9 @@ parentViewController:(UIViewController*)parentViewController
                     return;
                 }
             }
+
+            self.viewController.checkButton.width = 0;
+            [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(hideCheckButton) userInfo:nil repeats:NO];
             
             if (self.isSuccessBeepEnabled) {
                 AudioServicesPlaySystemSound(_soundFileObject);
@@ -483,6 +487,10 @@ parentViewController:(UIViewController*)parentViewController
             [self.continuousArray addObject:text];
         }
     });
+}
+
+- (void) hideCheckButton(){
+    self.viewController.checkButton.width = 0.01;
 }
 
 //--------------------------------------------------------------------------
