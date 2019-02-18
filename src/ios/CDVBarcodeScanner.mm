@@ -479,7 +479,7 @@ parentViewController:(UIViewController*)parentViewController
                 }
             }
 
-            [self.viewController.checkButton setImage: self.checkButtonImage];
+            [self.viewController.checkButton setImage: self.viewController.checkButtonImage];
             [NSTimer scheduledTimerWithTimeInterval:2 target:self selector:@selector(hideCheckButton) userInfo:nil repeats:NO];
             
             if (self.isSuccessBeepEnabled) {
