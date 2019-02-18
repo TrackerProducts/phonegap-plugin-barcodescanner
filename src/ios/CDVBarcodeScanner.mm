@@ -82,7 +82,7 @@
 - (void)openDialog;
 - (NSString*)setUpCaptureSession;
 - (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection;
-- (void) hideCheckButton();
+- (void) hideCheckButton;
 @end
 
 //------------------------------------------------------------------------------
@@ -489,7 +489,7 @@ parentViewController:(UIViewController*)parentViewController
     });
 }
 
-- (void) hideCheckButton(){
+- (void) hideCheckButton {
     self.viewController.checkButton.width = 0.01;
 }
 
@@ -971,7 +971,7 @@ parentViewController:(UIViewController*)parentViewController
     NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:@"CDVBarcodeScanner" withExtension:@"bundle"];
     NSBundle *bundle = [NSBundle bundleWithURL:bundleURL];
     NSString *imagePath = [bundle pathForResource:@"check" ofType:@"png"];
-    UIImage *image = [UIImage imageWithContentsOfFile:imagePath];
+    UIImage *image = [[UIImage imageWithContentsOfFile:imagePath] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
 
     self.checkButton = [[UIBarButtonItem alloc]
                         initWithImage:image
