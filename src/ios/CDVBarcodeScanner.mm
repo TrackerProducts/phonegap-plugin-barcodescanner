@@ -972,13 +972,6 @@ parentViewController:(UIViewController*)parentViewController
                        target:(id)self
                        action:@selector(flipCameraButtonPressed:)
                        ];
-
-    /*
-    NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:@"CDVBarcodeScanner" withExtension:@"bundle"];
-    NSBundle *bundle = [NSBundle bundleWithURL:bundleURL];
-    NSString *imagePath = [bundle pathForResource:@"check" ofType:@"png"];
-    self.checkButtonImage = [[UIImage imageWithContentsOfFile:imagePath] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-   */
     
     NSMutableArray *items;
 
