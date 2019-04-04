@@ -107,9 +107,10 @@
 @property (nonatomic)         BOOL             shutterPressed;
 @property (nonatomic, retain) IBOutlet UIView* overlayView;
 @property (nonatomic, retain) UIToolbar * toolbar;
-@property (nonatomic, retain) UIView * reticleView;
+@property (nonatomic, retain) UIImageView * reticleView;
 @property (nonatomic, retain) UIImageView * checkBoxView;
 @property (nonatomic, strong) UIImage *checkButtonImage;
+@property (nonatomic, strong) UIImage* reticleImage;
 
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
@@ -479,9 +480,10 @@ parentViewController:(UIViewController*)parentViewController
                 }
             }
 
+            self.viewController.reticleView.image = nil;
             self.viewController.checkBoxView.image = self.viewController.checkButtonImage;
             
-            [NSTimer scheduledTimerWithTimeInterval:2 target:self selector:@selector(hideCheckButton) userInfo:nil repeats:NO];
+            [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(hideCheckButton) userInfo:nil repeats:NO];
             
             if (self.isSuccessBeepEnabled) {
                 AudioServicesPlaySystemSound(_soundFileObject);
@@ -493,6 +495,7 @@ parentViewController:(UIViewController*)parentViewController
 
 - (void) hideCheckButton {
     self.viewController.checkBoxView.image = nil;
+    self.viewController.reticleView.image = self.viewController.reticleImage;
 }
 
 //--------------------------------------------------------------------------
@@ -970,11 +973,13 @@ parentViewController:(UIViewController*)parentViewController
                        action:@selector(flipCameraButtonPressed:)
                        ];
 
+    /*
     NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:@"CDVBarcodeScanner" withExtension:@"bundle"];
     NSBundle *bundle = [NSBundle bundleWithURL:bundleURL];
     NSString *imagePath = [bundle pathForResource:@"check" ofType:@"png"];
     self.checkButtonImage = [[UIImage imageWithContentsOfFile:imagePath] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-
+   */
+    
     NSMutableArray *items;
 
 #if USE_SHUTTER
@@ -1017,20 +1022,9 @@ parentViewController:(UIViewController*)parentViewController
   }
     self.toolbar.items = items;
     [overlayView addSubview: self.toolbar];
-
-    self.checkBoxView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 320, 460)];
-    self.checkBoxView.opaque           = NO;
-    self.checkBoxView.contentMode      = UIViewContentModeScaleAspectFit;
-    self.checkBoxView.autoresizingMask = (UIViewAutoresizing) (0
-                                                              | UIViewAutoresizingFlexibleLeftMargin
-                                                              | UIViewAutoresizingFlexibleRightMargin
-                                                              | UIViewAutoresizingFlexibleTopMargin
-                                                              | UIViewAutoresizingFlexibleBottomMargin);
     
-    [overlayView addSubview: self.checkBoxView];
-    
-    UIImage* reticleImage = [self buildReticleImage];
-    self.reticleView = [[UIImageView alloc] initWithImage:reticleImage];
+    self.reticleImage = [self buildReticleImage];
+    self.reticleView = [[UIImageView alloc] initWithImage:self.reticleImage];
 
     self.reticleView.opaque           = NO;
     self.reticleView.contentMode      = UIViewContentModeScaleAspectFit;
@@ -1042,6 +1036,19 @@ parentViewController:(UIViewController*)parentViewController
     ;
 
     [overlayView addSubview: self.reticleView];
+
+    self.checkButtonImage = [self buildSnapshotImage];
+    self.checkBoxView = [[UIImageView alloc] initWithImage:self.reticleImage];
+    self.checkBoxView.opaque           = NO;
+    self.checkBoxView.contentMode      = UIViewContentModeScaleAspectFit;
+    self.checkBoxView.autoresizingMask = (UIViewAutoresizing) (0
+                                                               | UIViewAutoresizingFlexibleLeftMargin
+                                                               | UIViewAutoresizingFlexibleRightMargin
+                                                               | UIViewAutoresizingFlexibleTopMargin
+                                                               | UIViewAutoresizingFlexibleBottomMargin);
+    
+    [overlayView addSubview: self.checkBoxView];
+
     [self resizeElements];
     return overlayView;
 }
@@ -1086,6 +1093,39 @@ parentViewController:(UIViewController*)parentViewController
                             );
     }
 
+    result = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return result;
+}
+
+- (UIImage*)buildSnapshotImage {
+    UIImage* result;
+    UIGraphicsBeginImageContext(CGSizeMake(RETICLE_SIZE, RETICLE_SIZE));
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    if (self.processor.is1D) {
+        UIColor* color = [UIColor colorWithRed:1.0 green:0.0 blue:0.0 alpha:RETICLE_ALPHA];
+        CGContextSetStrokeColorWithColor(context, color.CGColor);
+        CGContextSetLineWidth(context, RETICLE_WIDTH);
+        CGContextBeginPath(context);
+        CGFloat lineOffset = (CGFloat) (RETICLE_OFFSET+(0.5*RETICLE_WIDTH));
+        CGContextMoveToPoint(context, lineOffset, RETICLE_SIZE/2);
+        CGContextAddLineToPoint(context, RETICLE_SIZE-lineOffset, (CGFloat) (0.5*RETICLE_SIZE));
+        CGContextStrokePath(context);
+    }
+    
+    UIColor* color = [UIColor colorWithRed:1.0 green:0.0 blue:0.0 alpha:RETICLE_ALPHA];
+    CGContextSetStrokeColorWithColor(context, color.CGColor);
+    CGContextSetLineWidth(context, RETICLE_WIDTH);
+    CGContextStrokeRect(context,
+                        CGRectMake(
+                                   RETICLE_OFFSET,
+                                   RETICLE_OFFSET,
+                                   RETICLE_SIZE-2*RETICLE_OFFSET,
+                                   RETICLE_SIZE-2*RETICLE_OFFSET
+                                   )
+                        );
+    
     result = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return result;
@@ -1161,16 +1201,10 @@ parentViewController:(UIViewController*)parentViewController
                           minAxis
                           );
 
-    CGRect checkBoxArea = CGRectMake(
-                         rootViewWidth - 80,
-                         rootViewHeight - toolbarHeight - 80,
-                         80,
-                         80
-                          );
-
     [self.reticleView setFrame:rectArea];
-    [self.checkBoxView setFrame:checkBoxArea];
+    [self.checkBoxView setFrame:rectArea];
     self.reticleView.center = CGPointMake(self.view.center.x, self.view.center.y-self.toolbar.frame.size.height/2);
+    self.checkBoxView.center = CGPointMake(self.view.center.x, self.view.center.y-self.toolbar.frame.size.height/2);
 }
 
 @end
