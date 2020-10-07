@@ -111,9 +111,9 @@
 @property (nonatomic, retain) UIImageView * checkBoxView;
 @property (nonatomic, strong) UIImage *checkButtonImage;
 @property (nonatomic, strong) UIImage* reticleImage;
-
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
+@property (nonatomic, getter=isModalInPresentation) BOOL modalInPresentation;
 
 - (id)initWithProcessor:(CDVbcsProcessor*)processor alternateOverlay:(NSString *)alternateXib;
 - (void)startCapturing;
@@ -397,6 +397,9 @@ parentViewController:(UIViewController*)parentViewController
     // here we set the orientation delegate to the MainViewController of the app (orientation controlled in the Project Settings)
     self.viewController.orientationDelegate = self.plugin.viewController;
 
+    if (@available(iOS 13.0, *)) {
+        self.viewController.modalInPresentation = YES;
+    }
     // delayed [self openDialog];
     [self performSelector:@selector(openDialog) withObject:nil afterDelay:1];
 }
